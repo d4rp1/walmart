@@ -6,7 +6,12 @@
   <style>
     body {
       font-family: sans-serif;
-      white-space: pre-wrap;
+      margin: 20px;
+    }
+    .mensaje {
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
     }
   </style>
 </head>
@@ -31,7 +36,16 @@
         }
 
         const data = await response.json();
-        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        const contenedor = document.getElementById("output");
+        contenedor.innerHTML = "";
+
+        data.forEach(msg => {
+          const div = document.createElement("div");
+          div.className = "mensaje";
+          // Ajusta el campo según tu tabla (ej: msg.content, msg.text, etc.)
+          div.textContent = msg.content || JSON.stringify(msg);
+          contenedor.appendChild(div);
+        });
       } catch (err) {
         document.getElementById("output").textContent = "Error al cargar los mensajes:\n" + err;
       }
