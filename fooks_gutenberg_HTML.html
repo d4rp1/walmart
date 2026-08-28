@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FooKs — Project Gutenberg Reader</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#111318;
+  --panel:#191c23;
+  --panel2:#222631;
+  --text:#f5f7fa;
+  --muted:#aeb6c2;
+  --cyan:#28d7ff;
+  --purple:#d77bff;
+  --yellow:#ffd84d;
+  --red:#ff6673;
+  --green:#55e69b;
+  --border:#343a47;
+}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}
+body{font-family:Arial,Helvetica,sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;display:flex;flex-direction:column}
+header{
+  padding:18px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,#1b1e25,#14161b);
+}
+.logo{
+  font-family:monospace;
+  font-weight:900;
+  font-size:clamp(40px,10vw,82px);
+  line-height:.85;
+  letter-spacing:-5px;
+  color:var(--purple);
+  text-shadow:0 0 18px #d77bff55;
+  margin:0 0 10px;
+}
+.welcome{color:var(--text);font-size:16px}
+.welcome b{color:var(--cyan)}
+.toolbar{
+  display:flex;gap:8px;flex-wrap:wrap;margin-top:18px
+}
+.toolbar input{
+  flex:1 1 220px;min-width:0;
+  background:#0d0f13;color:#fff;border:1px solid var(--border);
+  border-radius:9px;padding:11px 12px;outline:none;
+}
+.toolbar input:focus{border-color:var(--cyan)}
+.btn{
+  border:1px solid var(--border);border-radius:9px;
+  background:var(--panel2);color:#fff;padding:10px 14px;
+  font-weight:700;
+}
+.btn:hover{filter:brightness(1.15)}
+.btn.cyan{border-color:#28d7ff88;color:var(--cyan)}
+.btn.yellow{border-color:#ffd84d88;color:var(--yellow)}
+.btn.purple{border-color:#d77bff88;color:var(--purple)}
+.layout{
+  display:grid;grid-template-columns:minmax(0,430px) 1fr;
+  min-height:0;flex:1
+}
+aside{
+  border-right:1px solid var(--border);
+  background:#15181e;
+  min-height:calc(100vh - 230px);
+}
+.section-title{
+  padding:14px 16px;border-bottom:1px solid var(--border);
+  color:var(--yellow);font-weight:900;
+}
+#book-list{list-style:none;margin:0;padding:0}
+.book{
+  padding:12px 16px;border-bottom:1px solid #282d37;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.book:hover{background:#1e222a}
+.book-id{
+  min-width:58px;color:var(--cyan);font-family:monospace;font-weight:900
+}
+.book-info{min-width:0;flex:1}
+.book-title{font-weight:800;line-height:1.25}
+.book-author{font-size:13px;color:var(--muted);margin-top:4px}
+.book-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.mini{
+  border:1px solid var(--border);background:#101217;color:#fff;
+  border-radius:6px;padding:5px 8px;font-size:12px
+}
+main{min-width:0;padding:18px}
+.card{
+  background:#171a21;border:1px solid var(--border);
+  border-radius:14px;overflow:hidden
+}
+.card-head{
+  padding:16px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap
+}
+.card-head h1{margin:0;font-size:21px}
+#status{color:var(--muted);padding:14px 16px}
+#reader{
+  display:none;
+  background:#fcfcf9;color:#222;
+  min-height:55vh;max-height:72vh;overflow:auto;
+  padding:30px clamp(16px,5vw,60px);
+  font-family:Georgia,serif;line-height:1.65;font-size:18px
+}
+#reader pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0 auto;max-width:850px}
+#reader .reader-html{max-width:900px;margin:auto}
+#reader img{max-width:100%;height:auto}
+#reader a{color:#185aa5}
+.empty{padding:35px 18px;text-align:center;color:var(--muted)}
+.loading{color:var(--yellow)!important}
+.error{color:var(--red)!important}
+.success{color:var(--green)!important}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+#direct-link{display:none}
+.notice{
+  margin:16px;padding:12px;border:1px dashed #454b58;
+  border-radius:9px;color:var(--muted);font-size:13px
+}
+@media(max-width:800px){
+ .layout{grid-template-columns:1fr}
+ aside{border-right:0;border-bottom:1px solid var(--border);min-height:auto}
+ #book-list{max-height:38vh;overflow:auto}
+ main{padding:10px}
+ #reader{max-height:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">FooKs</div>
+  <div class="welcome">¡¡Welcome to Fooks!! 📖 — <b>Popular Books</b> — 📚</div>
+
+  <div class="toolbar">
+    <input id="id-input" type="number" min="1" placeholder="ID del libro, por ejemplo 345">
+    <button class="btn purple" id="read-btn">▶ Leer ID</button>
+    <button class="btn yellow" id="download-btn">↓ Descargar ID</button>
+    <button class="btn cyan" id="refresh-btn">↻ Actualizar</button>
+  </div>
+</header>
+
+<div class="layout">
+<aside>
+  <div class="section-title">ID &nbsp;&nbsp;&nbsp; BOOK</div>
+  <ul id="book-list"></ul>
+  <div id="list-status" class="notice">Cargando libros populares…</div>
+</aside>
+
+<main>
+  <div class="card">
+    <div class="card-head">
+      <h1 id="book-heading">Selecciona un libro</h1>
+      <div class="controls">
+        <button class="btn cyan" id="open-page" style="display:none">Página ↗</button>
+        <button class="btn purple" id="open-reader" style="display:none">Lector ↗</button>
+      </div>
+    </div>
+
+    <div id="status">Usa <b>Leer ID</b> o selecciona un libro de la lista.</div>
+    <div id="reader"></div>
+  </div>
+</main>
+</div>
+</div>
+
+<script>
+const GUTENDEX = "https://gutendex.com";
+const GUTENBERG = "https://www.gutenberg.org";
+
+let books = [];
+let currentBook = null;
+
+const list = document.getElementById("book-list");
+const listStatus = document.getElementById("list-status");
+const idInput = document.getElementById("id-input");
+const status = document.getElementById("status");
+const reader = document.getElementById("reader");
+const heading = document.getElementById("book-heading");
+const pageBtn = document.getElementById("open-page");
+const readerBtn = document.getElementById("open-reader");
+
+function esc(v){
+  return String(v ?? "").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+
+function gutenbergPage(id){
+  return `${GUTENBERG}/ebooks/${id}`;
+}
+
+function normalizeBook(b){
+  return {
+    id:b.id,
+    title:b.title || "Sin título",
+    author:b.authors?.length
+      ? b.authors.map(a=>a.name).join(", ")
+      : "Autor desconocido",
+    formats:b.formats || {}
+  };
+}
+
+function chooseFormat(formats, kind){
+  const entries=Object.entries(formats || {});
+  const preferred = kind === "html"
+    ? [
+        "text/html; charset=utf-8",
+        "text/html",
+        "application/xhtml+xml"
+      ]
+    : [
+        "text/plain; charset=utf-8",
+        "text/plain"
+      ];
+
+  for(const mime of preferred){
+    const found=entries.find(([k,url])=>
+      k.toLowerCase()===mime.toLowerCase() && url
+    );
+    if(found) return found[1];
+  }
+
+  const match=entries.find(([k,url])=>
+    (kind==="html"
+      ? k.toLowerCase().startsWith("text/html")
+      : k.toLowerCase().startsWith("text/plain")) && url
+  );
+
+  return match ? match[1] : null;
+}
+
+function renderBooks(){
+  list.innerHTML="";
+  books.forEach(book=>{
+    const li=document.createElement("li");
+    li.className="book";
+    li.innerHTML=`
+      <div class="book-id">#${book.id}</div>
+      <div class="book-info">
+        <div class="book-title">${esc(book.title)}</div>
+        <div class="book-author">${esc(book.author)}</div>
+        <div class="book-actions">
+          <button class="mini read">Leer</button>
+          <button class="mini download">Descargar</button>
+        </div>
+      </div>`;
+    li.querySelector(".read").onclick=()=>readById(book.id);
+    li.querySelector(".download").onclick=()=>downloadByBook(book);
+    list.appendChild(li);
+  });
+}
+
+async function loadPopular(){
+  listStatus.textContent="Cargando los 25 libros más descargados…";
+  listStatus.className="notice";
+
+  try{
+    const r=await fetch(
+      `${GUTENDEX}/books/?sort=popular&page=1`,
+      {cache:"no-store"}
+    );
+    if(!r.ok) throw new Error("Gutendex respondió con HTTP "+r.status);
+    const data=await r.json();
+
+    books=(data.results || []).slice(0,25).map(normalizeBook);
+    renderBooks();
+
+    listStatus.textContent=`${books.length} libros populares cargados.`;
+    listStatus.className="notice success";
+  }catch(e){
+    listStatus.textContent="No se pudo actualizar la lista. Intenta ↻ Actualizar.";
+    listStatus.className="notice error";
+    console.error(e);
+  }
+}
+
+async function getBook(id){
+  const r=await fetch(
+    `${GUTENDEX}/books/${encodeURIComponent(id)}`,
+    {cache:"no-store"}
+  );
+  if(!r.ok) throw new Error(`El libro #${id} no existe o no está disponible.`);
+  return normalizeBook(await r.json());
+}
+
+async function fetchText(url){
+  /* Gutendex/Gutenberg normally allow the browser to read the text.
+     If a browser blocks CORS, try two public read-only fallbacks. */
+  const attempts=[
+    url,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(url)}`
+  ];
+
+  let last=null;
+
+  for(const target of attempts){
+    try{
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),12000);
+      const r=await fetch(target,{cache:"no-store",signal:controller.signal});
+      clearTimeout(timer);
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const text=await r.text();
+      if(text && text.length>200) return text;
+    }catch(e){ last=e; }
+  }
+
+  throw last || new Error("No fue posible obtener el texto.");
+}
+
+function showBookHeader(book){
+  currentBook=book;
+  heading.textContent=book.title;
+  pageBtn.style.display="inline-block";
+  readerBtn.style.display="inline-block";
+  pageBtn.onclick=()=>window.open(gutenbergPage(book.id),"_blank","noopener");
+  readerBtn.onclick=()=>window.open(
+    `https://d4rp1.github.io/walmart/?id=${book.id}`,
+    "_blank","noopener"
+  );
+}
+
+async function readById(id){
+  id=String(id).trim();
+  if(!/^\d+$/.test(id)){
+    status.className="error";
+    status.textContent="Introduce un ID numérico.";
+    return;
+  }
+
+  idInput.value=id;
+  reader.style.display="none";
+  reader.innerHTML="";
+  status.className="loading";
+  status.textContent=`[+] Buscando libro #${id}…`;
+
+  try{
+    const book=await getBook(id);
+    showBookHeader(book);
+
+    const textUrl=chooseFormat(book.formats,"text");
+    const htmlUrl=chooseFormat(book.formats,"html");
+
+    if(textUrl){
+      status.textContent=`[+] Reading — ${book.title}`;
+      const text=await fetchText(textUrl);
+
+      const pre=document.createElement("pre");
+      pre.textContent=text;
+      reader.appendChild(pre);
+      reader.style.display="block";
+
+      status.className="success";
+      status.textContent=`✓ Leyendo: ${book.title}`;
+      return;
+    }
+
+    if(htmlUrl){
+      status.textContent=`[+] Abriendo versión HTML — ${book.title}`;
+      window.open(htmlUrl,"_blank","noopener");
+      status.className="success";
+      status.textContent="✓ El libro se abrió en una pestaña nueva.";
+      return;
+    }
+
+    throw new Error("Este libro no tiene una versión TXT/HTML disponible.");
+  }catch(e){
+    status.className="error";
+    status.textContent="[!] "+(e.message || "No se pudo leer el libro.");
+    reader.style.display="none";
+  }
+}
+
+function downloadByBook(book){
+  const url=chooseFormat(book.formats,"text")
+    || chooseFormat(book.formats,"html")
+    || gutenbergPage(book.id);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.target="_blank";
+  a.rel="noopener noreferrer";
+  a.download="";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  status.className="success";
+  status.textContent=`✓ Descarga/archivo abierto para #${book.id}.`;
+}
+
+async function downloadById(id){
+  id=String(id).trim();
+  if(!/^\d+$/.test(id)){
+    status.className="error";
+    status.textContent="Introduce un ID numérico.";
+    return;
+  }
+
+  status.className="loading";
+  status.textContent=`[+] Preparing download for #${id}…`;
+
+  try{
+    const book=await getBook(id);
+    showBookHeader(book);
+    downloadByBook(book);
+  }catch(e){
+    status.className="error";
+    status.textContent="[!] "+e.message;
+  }
+}
+
+document.getElementById("read-btn").onclick=()=>{
+  readById(idInput.value);
+};
+
+document.getElementById("download-btn").onclick=()=>{
+  downloadById(idInput.value);
+};
+
+idInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter") readById(idInput.value);
+});
+
+document.getElementById("refresh-btn").onclick=loadPopular;
+
+loadPopular();
+</script>
+</body>
+</html>
